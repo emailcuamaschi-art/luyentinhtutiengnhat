@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luyện Chia Tính Từ Tiếng Nhật</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
+        h1 { color: #2c3e50; font-size: 24px; margin-bottom: 20px; }
+        .word-box { background: #eef2f3; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #3498db; }
+        .japanese { font-size: 32px; font-weight: bold; color: #2c3e50; margin: 0; }
+        .meaning { font-size: 16px; color: #7f8c8d; font-style: italic; margin: 5px 0 0 0; }
+        .requirement { font-size: 18px; margin: 15px 0; color: #e67e22; font-weight: bold; }
+        input[type="text"] { width: 100%; padding: 12px; font-size: 18px; border: 2px solid #bdc3c7; border-radius: 6px; box-sizing: border-box; transition: border 0.3s; text-align: center; }
+        input[type="text"]:focus { border-color: #3498db; outline: none; }
+        button { background: #3498db; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 15px; transition: background 0.2s; font-weight: bold; }
+        button:hover { background: #2980b9; }
+        .result { margin-top: 15px; font-size: 18px; font-weight: bold; min-height: 25px; }
+        .correct { color: #27ae60; }
+        .incorrect { color: #c0392b; }
+        .hint { font-size: 14px; color: #7f8c8d; margin-top: 5px; font-weight: normal; }
+        .counter { font-size: 12px; color: #95a5a6; text-align: right; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Luyện Chia Tính Từ 🇯🇵🇻🇳</h1>
+    <div class="counter" id="vocab-count">Đang tải...</div>
+    
+    <div class="word-box">
+        <p class="japanese" id="vocab">---</p>
+        <p class="meaning" id="meaning">---</p>
+    </div>
+
+    <div class="requirement" id="form-req">Hãy chia sang: ---</div>
+
+    <input type="text" id="user-answer" placeholder="Gõ Romaji tự đổi sang Hiragana..." autocomplete="off">
+    
+    <button id="action-btn" onclick="checkAnswer()">Kiểm tra</button>
+    <div class="result" id="result-msg"></div>
+</div>
+
+<script>
+    // BỘ ĐỔI MÃ ROMAJI SANG HIRAGANA THỜI GIAN THỰC (BẢN FIX CHỐNG XUNG ĐỘT)
+    function translateToHiragana(text) {
+        let res = text.toLowerCase();
+        
+        // 1. Xử lý phụ âm đôi (ví dụ: kk, ss, tt, pp -> っk, っs...)
+        res = res.replace(/([kstgzdbjp])\1/g, 'っ$1');
+        
+        // 2. Bảng tra cứu cụm từ thông dụng nhất
+        const romajiMap = {
+            'kya':'きゃ','kyu':'きゅ','kyo':'きょ',
+            'sha':'しゃ','shu':'しゅ','sho':'しょ',
+            'cha':'ちゃ','chu':'ちゅ','cho':'ちょ',
+            'nya':'にゃ','nyu':'にゅ','nyo':'にょ',
+            'hya':'ひゃ','hyu':'ひゅ','hyo':'ひょ',
+            'mya':'みゃ','myu':'みゅ','myo':'みょ',
+            'rya':'りゃ','ryu':'りゅ','ryo':'りょ',
+            'gya':'ぎゃ','gyu':'ぎゅ','gyo':'ぎょ',
+            'ja':'じゃ','ju':'じゅ','jo':'じょ',
+            'bya':'びゃ','byu':'びゅ','byo':'びょ',
+            'pya':'ぴゃ','pyu':'ぴゅ','pyo':'ぴょ',
+            'ka':'か','ki':'き','ku':'く','ke':'け','ko':'こ',
+            'sa':'さ','shi':'し','su':'す','se':'せ','so':'そ',
+            'ta':'た','chi':'ち','tsu':'つ','te':'て','to':'と',
+            'na':'な','ni':'に','nu':'ぬ','ne':'ね','no':'の',
+            'ha':'は','hi':'ひ','fu':'ふ','he':'へ','ho':'ほ',
+            'ma':'ま','mi':'み','mu':'む','me':'め','mo':'も',
+            'ya':'や','yu':'ゆ','yo':'よ',
+            'ra':'ら','ri':'り','ru':'る','re':'れ','ro':'ろ',
+            'wa':'わ','wo':'を','nn':'ん',
+            'ga':'が','gi':'ぎ','gu':'ぐ','ge':'げ','go':'ご',
+            'za':'ざ','ji':'じ','zu':'ず','ze':'ぜ','zo':'ぞ',
+            'da':'だ','di':'ぢ','du':'づ','de':'で','do':'ど',
+            'ba':'ば','bi':'び','bu':'ぶ','be':'べ','bo':'ぼ',
+            'pa':'ぱ','pi':'ぴ','pu':'ぷ','pe':'ぺ','po':'ぽ',
+            'a':'あ','i':'い','u':'う','e':'え','o':'お'
+        };
+        
+        // Thay thế các ký tự Latinh bằng Hiragana theo thứ tự dài trước ngắn sau
+        for (let key in romajiMap) {
+            res = res.split(key).join(romajiMap[key]);
+        }
+        
+        // 3. Xử lý chữ "n" đơn lẻ đứng cuối từ hoặc trước phụ âm khác
+        res = res.replace(/n(?![aiueoy])/g, 'ん');
+         // ==============================================================
+        // THÊM ĐOẠN NÀY VÀO ĐỂ SỬA LỖI んあ CỦA BỘ GÕ
+        res = res.replace(/んあ/g, 'な');
+        res = res.replace(/んい/g, 'に');
+        res = res.replace(/んう/g, 'ぬ');
+        res = res.replace(/んえ/g, 'ね');
+        res = res.replace(/んお/g, 'の');
+	res = res.replace(/tす/g, 'つ');
+        // ==============================================================
+        
+        return res;
+    }
+
+    // Theo dõi ô nhập liệu và tự động ép chuyển mã liên tục
+    const inputElement = document.getElementById('user-answer');
+    inputElement.addEventListener('input', function() {
+        let start = this.selectionStart;
+        let oldLen = this.value.length;
+        
+        // Thực hiện chuyển sang Hiragana
+        this.value = translateToHiragana(this.value);
+        
+        // Giữ vị trí con trỏ chuột không bị nhảy ra cuối hàng khi gõ
+        let newLen = this.value.length;
+        this.setSelectionRange(start + (newLen - oldLen), start + (newLen - oldLen));
+    });
+
+    // KHO TỪ VỰNG MỞ RỘNG (N5 & N4)
+    const adjectives = [
+       // === 21 TÍNH TỪ ĐUÔI NA ===
+        { kana: "いろいろ", type: "na", meaning: "Nhiều, đa dạng" },
+        { kana: "かんたん", type: "na", meaning: "Đơn giản, dễ" },
+        { kana: "きらい", type: "na", meaning: "Ghét" },
+        { kana: "きれい", type: "na", meaning: "Đẹp, sạch sẽ" },
+        { kana: "げんき", type: "na", meaning: "Khỏe mạnh" },
+        { kana: "しずか", type: "na", meaning: "Yên tĩnh" },
+        { kana: "じょうず", type: "na", meaning: "Giỏi" },
+        { kana: "じゅうぶん", type: "na", meaning: "Đủ" },
+        { kana: "しんせつ", type: "na", meaning: "Tốt bụng, thân thiện" },
+        { kana: "すき", type: "na", meaning: "Thích" },
+        { kana: "だいじょうぶ", type: "na", meaning: "Ổn, không sao" },
+        { kana: "だいすき", type: "na", meaning: "Rất thích" },
+        { kana: "たいせつ", type: "na", meaning: "Quan trọng, quý giá" },
+        { kana: "たいへん", type: "na", meaning: "Vất vả, kinh khủng" },
+        { kana: "ていねい", type: "na", meaning: "Lịch sự" },
+        { kana: "とくい", type: "na", meaning: "Giỏi, sở trường" },
+        { kana: "にぎやか", type: "na", meaning: "Náo nhiệt, nhộn nhịp" },
+        { kana: "ひま", type: "na", meaning: "Rảnh rỗi" },
+        { kana: "へた", type: "na", meaning: "Kém, dở" },
+        { kana: "べんり", type: "na", meaning: "Tiện lợi" },
+        { kana: "ゆうめい", type: "na", meaning: "Nổi tiếng" },
+        
+        // === 52 TÍNH TỪ ĐUÔI I ===
+        { kana: "ちいさい", type: "i", meaning: "Nhỏ, bé" },
+        { kana: "つめたい", type: "i", meaning: "Lạnh (đồ vật/cảm giác)" },
+        { kana: "つよい", type: "i", meaning: "Mạnh mẽ" },
+        { kana: "つまらない", type: "i", meaning: "Chán, buồn tẻ" },
+        { kana: "とおい", type: "i", meaning: "Xa" },
+        { kana: "ながい", type: "i", meaning: "Dài" },
+        { kana: "ねむい", type: "i", meaning: "Buồn ngủ" },
+        { kana: "はげしい", type: "i", meaning: "Mãnh liệt, dữ dội" },
+        { kana: "hayai", kana: "はやい", type: "i", meaning: "Nhanh / Sớm" },
+        { kana: "ひくい", type: "i", meaning: "Thấp" },
+        { kana: "ひろい", type: "i", meaning: "Rộng" },
+        { kana: "ふとい", type: "i", meaning: "Béo, mập, dày" },
+        { kana: "ふるい", type: "i", meaning: "Cũ" },
+        { kana: "ほしい", type: "i", meaning: "Muốn có" },
+        { kana: "ほそい", type: "i", meaning: "Gầy, mảnh khảnh" },
+        { kana: "まるい", type: "i", meaning: "Tròn" },
+        { kana: "みじかい", type: "i", meaning: "Ngắn" },
+        { kana: "むずかしい", type: "i", meaning: "Khó" },
+        { kana: "やさしい", type: "i", meaning: "Dễ / Hiền lành" },
+        { kana: "やすい", type: "i", meaning: "Rẻ" },
+        { kana: "よわい", type: "i", meaning: "Yếu ớt" },
+        { kana: "わるい", type: "i", meaning: "Xấu, tồi" },
+        { kana: "あおい", type: "i", meaning: "Xanh dương" },
+        { kana: "あかい", type: "i", meaning: "Đỏ" },
+        { kana: "あたらしい", type: "i", meaning: "Mới" },
+        { kana: "あかるい", type: "i", meaning: "Sáng sủa" },
+        { kana: "あつい", type: "i", meaning: "Nóng (thời tiết / đồ vật)" },
+        { kana: "あまい", type: "i", meaning: "Ngọt" },
+        { kana: "いそがしい", type: "i", meaning: "Bận rộn" },
+        { kana: "いたい", type: "i", meaning: "Đau" },
+        { kana: "うつくしい", type: "i", meaning: "Đẹp, lộng lẫy" },
+        { kana: "うれしい", type: "i", meaning: "Vui mừng, hạnh phúc" },
+        { kana: "えらい", type: "i", meaning: "Vĩ đại, giỏi giang" },
+        { kana: "おいしい", type: "i", meaning: "Ngon" },
+        { kana: "おおきい", type: "i", meaning: "To, lớn" },
+        { kana: "おそい", type: "i", meaning: "Chậm, muộn" },
+        { kana: "おmoい", kana: "おもい", type: "i", meaning: "Nặng" },
+        { kana: "おもしろい", type: "i", meaning: "Thú vị" },
+        { kana: "からい", type: "i", meaning: "Cay" },
+        { kana: "かるい", type: "i", meaning: "Nhẹ" },
+        { kana: "かわいい", type: "i", meaning: "Đáng yêu, dễ thương" },
+        { kana: "きいろい", type: "i", meaning: "Vàng" },
+        { kana: "くろい", type: "i", meaning: "Đen" },
+        { kana: "こわい", type: "i", meaning: "Sợ hãi, đáng sợ" },
+        { kana: "さびしい", type: "i", meaning: "Cô đơn, buồn bã" },
+        { kana: "さむい", type: "i", meaning: "Lạnh (thời tiết)" },
+        { kana: "しかくい", type: "i", meaning: "Vuông" },
+        { kana: "しろい", type: "i", meaning: "Trắng" },
+        { kana: "すくない", type: "i", meaning: "Ít" },
+        { kana: "すごい", type: "i", meaning: "Ghê gớm, tuyệt vời" },
+        { kana: "すずしい", type: "i", meaning: "Mát mẻ" },
+        { kana: "たかい", type: "i", meaning: "Cao, đắt" },
+        { kana: "たのしい", type: "i", meaning: "Vui vẻ" },
+        { kana: "いい", type: "i_special", meaning: "Tốt (Từ đặc biệt)" }
+
+    ];
+
+    document.getElementById("vocab-count").innerText = `Tổng số từ: ${adjectives.length}`;
+
+    const forms = [
+      { id: "past", name: "Quá khứ khẳng định (Thân mật)" },
+        { id: "negative", name: "Phủ định hiện tại (Thân mật)" },
+        { id: "past_negative", name: "Phủ định quá khứ (Thân mật)" },
+        { id: "te", name: "Thể て (Để nối câu)" },
+        { id: "past_polite", name: "Quá khứ khẳng định (Lịch sự)" },
+        { id: "negative_polite", name: "Phủ định hiện tại (Lịch sự)" },
+        { id: "past_negative_polite", name: "Phủ định quá khứ (Lịch sự)" }
+    ];
+    let currentWord, currentForm, correctAnswer, isChecked = false;
+
+        function getConjugation(word, formId) {
+        let base = word.kana;
+        
+        // 1. Nhóm từ đặc biệt (いい)
+        if (word.type === "i_special") {
+            let stem = base.slice(0, -2);
+            if (formId === "past") return "よかった";
+            if (formId === "negative") return "よくない";
+            if (formId === "past_negative") return "よくなかった";
+            if (formId === "te") return "よくて";
+            if (formId === "past_polite") return "よかったです";
+            if (formId === "negative_polite") return "よくないです";
+            if (formId === "past_negative_polite") return "よくなかったです";
+        }
+        
+        // 2. Tính từ đuôi i thường
+        if (word.type === "i") {
+            let stem = base.slice(0, -1);
+            if (formId === "past") return stem + "かった";
+            if (formId === "negative") return stem + "くない";
+            if (formId === "past_negative") return stem + "くなかった";
+            if (formId === "te") return stem + "くて";
+            if (formId === "past_polite") return stem + "かったです";
+            if (formId === "negative_polite") return stem + "くないです";
+            if (formId === "past_negative_polite") return stem + "くなかったです";
+        }
+        
+        // 3. Tính từ đuôi na
+         if (word.type === "na") {
+            if (formId === "past") return [base + "だった"];
+            if (formId === "negative") return [base + "じゃない", base + "ではない"];
+            if (formId === "past_negative") return [base + "じゃなかった", base + "ではなかった"];
+            if (formId === "te") return [base + "で"];
+            if (formId === "past_polite") return [base + "でした"];
+            if (formId === "negative_polite") return [base + "じゃないです", base + "ではないです", base + "ではありません"];
+            if (formId === "past_negative_polite") return [base + "じゃなかったです", base + "ではなかったです", base + "ではありませんでした"];
+        }
+        return [""];
+    }
+
+    function nextQuestion() {
+        isChecked = false;
+        document.getElementById("result-msg").innerHTML = "";
+        document.getElementById("user-answer").value = "";
+        document.getElementById("user-answer").disabled = false;
+        document.getElementById("action-btn").innerText = "Kiểm tra";
+
+        currentWord = adjectives[Math.floor(Math.random() * adjectives.length)];
+        currentForm = forms[Math.floor(Math.random() * forms.length)];
+        correctAnswer = getConjugation(currentWord, currentForm.id);
+
+        document.getElementById("vocab").innerText = `${currentWord.kana} (${currentWord.type.includes('i') ? 'Tính từ -i' : 'Tính từ -na'})`;
+        document.getElementById("meaning").innerText = `Nghĩa: ${currentWord.meaning}`;
+        document.getElementById("form-req").innerText = `Hãy chia sang: ${currentForm.name}`;
+        document.getElementById("user-answer").focus();
+    }
+
+    function checkAnswer() {
+        const btn = document.getElementById("action-btn");
+        const input = document.getElementById("user-answer");
+        const msg = document.getElementById("result-msg");
+
+        if (!isChecked) {
+            let userAns = input.value.trim();
+            isChecked = true;
+            input.disabled = true;
+
+            if (correctAnswer.includes(userAns)) {
+                msg.innerHTML = `<span class="correct">Chính xác! 🎉</span>`;
+            } else {
+                // Hiển thị tất cả các phương án đúng cho học sinh tham khảo, ngăn cách bằng dấu gạch chéo /
+                let displayAnswers = correctAnswer.join(" / ");
+                msg.innerHTML = `<span class="incorrect">Sai rồi! ❌</span><div class="hint">Đáp án đúng: <strong>${displayAnswers}</strong></div>`;
+            }
+            btn.innerText = "Câu tiếp theo";
+        } else {
+            nextQuestion();
+        }
+    }
+
+    document.getElementById("user-answer").addEventListener("keyup", function(event) {
+        if (event.key === "Enter") {
+            checkAnswer();
+        }
+    });
+
+    // Gọi chạy câu hỏi ngay khi tải xong trang
+    nextQuestion();
+</script>
+
+</body>
+</html>
